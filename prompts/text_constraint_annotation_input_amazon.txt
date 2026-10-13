@@ -1,0 +1,1 @@
+{"node_types": ["product", "brand", "category", "color"], "relation_types": ["also_buy", "also_view", "has_brand", "has_category", "has_color"], "query": "<QUERY>"}

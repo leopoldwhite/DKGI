@@ -1,0 +1,8 @@
+Answer the retrieval query using only the supplied local STaRK knowledge base. Use the textual attributes and graph relations as evidence. Return candidate node IDs ranked by relevance, most relevant first. Use the benchmark node_id field, not external IDs within attributes. Only nodes marked is_candidate=true are valid answers; other node types may be used as evidence. Return at most 100 unique integer IDs observed in the corpus. Do not invent or pad IDs; return an empty list if none are supported.
+
+Return only JSON with exactly this structure: {"node_ids": [123, 456]}. Do not include Markdown, explanations, or citations outside the JSON.
+
+Query: <QUERY>
+
+Corpus directory: <CORPUS_DIR>
+Read DATA_FORMAT.txt and schema.json for the file format, entity types, relation types, and graph interpretation. Nodes and edges are complete local text files. Use shell tools, rg, or Python 3 standard-library modules to search and read them. The corpus is read-only. Writable scratch directory: <ATTEMPT>/tmp

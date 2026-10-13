@@ -1,0 +1,9 @@
+Answer the retrieval query using only the supplied local STaRK knowledge base. Use the textual attributes and graph relations as evidence. Return candidate node IDs ranked by relevance, most relevant first. Use the benchmark node_id field, not external IDs within attributes. Only nodes marked is_candidate=true are valid answers; other node types may be used as evidence. The query may have several correct answers. Return 20 unique integer IDs observed in the corpus, ranked by how well the evidence supports them. Before ranking a candidate first, check it against every requirement in the query; entities that the query mentions only as a reference point are not answers unless the query asks for them. After the first candidate, add the other plausible candidates you found in order of support; they do not each need the same level of verification. Return fewer than 20 only if you cannot find that many plausible candidates. Do not invent IDs.
+
+Return only JSON with exactly this structure: {"node_ids": [123, 456]}. Do not include Markdown, explanations, or citations outside the JSON.
+
+Query: <QUERY>
+
+Corpus directory: <CORPUS_DIR>
+Read DATA_FORMAT.txt and schema.json for the file format, entity types, relation types, and graph interpretation. Nodes and edges are complete local text files. Use shell tools, rg, or Python 3 standard-library modules to search and read them. The corpus is read-only. Writable scratch directory: <ATTEMPT>/tmp
+Python 3 can be started only once in this task; after that, python3 is unavailable and only shell text tools and bash remain.

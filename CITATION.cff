@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this code or the released data, please cite the paper."
+title: "DKGI: code and prompts"
+authors:
+  - family-names: Bai
+    given-names: Yuyang
+  - family-names: Wang
+    given-names: Yu
+  - family-names: Zhang
+    given-names: Yu
+license: MIT
+repository-code: "https://github.com/leopoldwhite/DKGI"
+url: "https://yuyangbai.com/dkgi/"
+preferred-citation:
+  type: generic
+  title: "Knowledge Graphs as Files: An Agent Harness Where Tool Creation and Tool Use Co-Evolve"
+  authors:
+    - family-names: Bai
+      given-names: Yuyang
+    - family-names: Wang
+      given-names: Yu
+    - family-names: Zhang
+      given-names: Yu
+  year: 2026

@@ -1,0 +1,181 @@
+diff --git a/setup.sh b/setup.sh
+--- a/setup.sh
++++ b/setup.sh
+@@ -9,8 +9,10 @@ echo "==> Setting up DCI environment..."
+ # Load .env if present
+ if [ -f ".env" ]; then
+     echo "==> Loading .env..."
+-    # shellcheck disable=SC2046
+-    export $(grep -v '^#' .env | xargs)
++    set -a
++    # shellcheck disable=SC1091
++    source .env
++    set +a
+ fi
+ 
+ # 1. Install uv if missing
+diff --git a/src/dci/benchmark/pi_rpc_runner.py b/src/dci/benchmark/pi_rpc_runner.py
+--- a/src/dci/benchmark/pi_rpc_runner.py
++++ b/src/dci/benchmark/pi_rpc_runner.py
+@@ -322,8 +322,9 @@ def judge_answer_sync(
+         ],
+     }
+     request_body = json.dumps(request_payload).encode("utf-8")
++    base_url = os.environ.get("OPENAI_BASE_URL", "").strip() or "https://api.openai.com/v1"
+     request = urllib.request.Request(
+-        "https://api.openai.com/v1/responses",
++        f"{base_url.rstrip('/')}/responses",
+         data=request_body,
+         headers={
+             "Authorization": f"Bearer {api_key}",
+@@ -530,10 +531,12 @@ class RunRecorder:
+         conversation_features: ConversationFeatures,
+         keep_session: bool,
+         resume: bool,
++        compact_tool_updates: bool = False,
+     ) -> None:
+         self.output_dir = output_dir
+         self.resume = resume
+         self.conversation_features = conversation_features
++        self.compact_tool_updates = compact_tool_updates
+         self.output_dir.mkdir(parents=True, exist_ok=True)
+         self._pending_tool_call_starts: Dict[str, str] = {}
+         self._completed_tool_call_timings: Dict[str, Dict[str, Any]] = {}
+@@ -669,6 +672,7 @@ class RunRecorder:
+                 "latest": None,
+                 "error": None,
+             }
++        self.state["compact_tool_updates"] = compact_tool_updates
+         self._restore_tool_call_timing_state()
+         self._write_artifacts()
+ 
+@@ -1017,6 +1021,18 @@ class RunRecorder:
+             f.write(text)
+ 
+     def record_event(self, event: Dict[str, Any]) -> None:
++        event_type = event.get("type")
++        compact_update = self.compact_tool_updates and event_type == "tool_execution_update"
++        if compact_update:
++            content = (event.get("partialResult") or {}).get("content", [])
++            event = {
++                **event,
++                "partialResult": {
++                    "omitted": True,
++                    "text_chars": sum(len(block.get("text", "")) for block in content if block.get("type") == "text"),
++                    "content_blocks": len(content),
++                },
++            }
+         with self.events_path.open("a", encoding="utf-8") as f:
+             f.write(json.dumps(event, ensure_ascii=False) + "\n")
+ 
+@@ -1024,7 +1040,8 @@ class RunRecorder:
+         self.state["event_count"] += 1
+         self.state["last_event_type"] = event.get("type")
+ 
+-        event_type = event.get("type")
++        if compact_update:
++            return
+         if event_type == "turn_start":
+             self.state["turn_count"] += 1
+         elif event_type in {"message_start", "message_end"}:
+@@ -1117,12 +1134,11 @@ class RunRecorder:
+     def finalize(self, *, status: str, final_text: str = "", error: Optional[str] = None, stderr_text: str = "") -> None:
+         self.state["status"] = status
+         self.state["finished_at"] = utc_now()
+-        self.state["assistant_text"] = final_text or self.state.get("assistant_text", "")
++        self.state["assistant_text"] = final_text
+         if error:
+             self.state["error"] = error
+ 
+-        if self.state["assistant_text"]:
+-            self.final_path.write_text(self.state["assistant_text"] + ("\n" if not self.state["assistant_text"].endswith("\n") else ""), encoding="utf-8")
++        self.final_path.write_text(final_text + ("\n" if final_text and not final_text.endswith("\n") else ""), encoding="utf-8")
+         if stderr_text:
+             if self.resume and self.stderr_path.exists():
+                 existing_stderr = self.stderr_path.read_text(encoding="utf-8")
+@@ -1271,7 +1287,6 @@ class PiRpcClient:
+         self._send({"id": request_id, "type": "prompt", "message": message})
+ 
+         auxiliary_ids: set[str] = set()
+-        text_parts: List[str] = []
+         prompt_ack = False
+         seen_turns = 0
+         sent_turn_limit_abort = False
+@@ -1311,7 +1326,6 @@ class PiRpcClient:
+                 assistant_event = event.get("assistantMessageEvent", {})
+                 if assistant_event.get("type") == "text_delta":
+                     delta = assistant_event.get("delta", "")
+-                    text_parts.append(delta)
+                     sys.stdout.write(delta)
+                     sys.stdout.flush()
+                 continue
+@@ -1331,9 +1345,20 @@ class PiRpcClient:
+             if event_type == "agent_end":
+                 if not prompt_ack:
+                     raise RuntimeError("Received agent_end before prompt acknowledgement")
+-                break
+-
+-        return "".join(text_parts)
++                for final_message in reversed(event.get("messages", [])):
++                    if final_message.get("role") == "assistant":
++                        if final_message.get("stopReason") in {"error", "aborted"}:
++                            raise RuntimeError(
++                                final_message.get("errorMessage") or f"Assistant response {final_message['stopReason']}"
++                            )
++                        content = final_message.get("content", [])
++                        if final_message.get("stopReason") == "toolUse" or any(block.get("type") == "toolCall" for block in content):
++                            raise RuntimeError("Agent ended with a tool call instead of a final answer")
++                        final_text = "\n".join(block.get("text", "") for block in content if block.get("type") == "text").strip()
++                        if not final_text:
++                            raise RuntimeError("Agent ended without a final assistant answer")
++                        return final_text
++                raise RuntimeError("Agent ended without a final assistant answer")
+ 
+     def get_stderr(self) -> str:
+         return "".join(self.stderr_chunks)
+@@ -1460,6 +1485,11 @@ def parse_args() -> argparse.Namespace:
+         action="store_true",
+         help="Print tool start/end events to stderr while the agent runs.",
+     )
++    parser.add_argument(
++        "--compact-tool-updates",
++        action="store_true",
++        help="Record progress metadata instead of cumulative tool update bodies; keep final tool results and model inputs intact.",
++    )
+     parser.add_argument(
+         "--extra-arg",
+         action="append",
+@@ -1587,6 +1617,8 @@ def validate_terminal_mode_args(args: argparse.Namespace) -> Optional[str]:
+         incompatible.append("--max-turns")
+     if args.show_tools:
+         incompatible.append("--show-tools")
++    if args.compact_tool_updates:
++        incompatible.append("--compact-tool-updates")
+     if args.conversation_clear_tool_results:
+         incompatible.append("--conversation-clear-tool-results")
+     if args.conversation_externalize_tool_results:
+@@ -1739,6 +1771,7 @@ def main() -> int:
+             conversation_features=conversation_features,
+             keep_session=args.keep_session,
+             resume=resume,
++            compact_tool_updates=args.compact_tool_updates,
+         )
+     except RuntimeError as exc:
+         print(str(exc), file=sys.stderr)
+@@ -1758,6 +1791,7 @@ def main() -> int:
+         extra_args=expand_extra_args(args.extra_arg),
+     )
+ 
++    final_text = ""
+     try:
+         client.start()
+         if client.command:
+@@ -1798,7 +1832,7 @@ def main() -> int:
+         return 0
+     except Exception as exc:
+         stderr_text = client.get_stderr().strip()
+-        recorder.finalize(status="failed", error=str(exc), stderr_text=stderr_text)
++        recorder.finalize(status="failed", final_text=final_text, error=str(exc), stderr_text=stderr_text)
+         print(f"RPC run failed: {exc}", file=sys.stderr)
+         if stderr_text:
+             print("\n[agent stderr]", file=sys.stderr)

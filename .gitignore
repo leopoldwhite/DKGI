@@ -1,0 +1,24 @@
+__pycache__/
+*.pyc
+.venv/
+# third-party checkouts (see Requirements)
+/DCI-Agent-Lite/
+/baselines/
+/STaRK/
+# data, views and results written by the scripts
+/experiments/stark/corpus/
+/experiments/stark/corpus2/
+/experiments/stark/corpus_views/
+/experiments/stark/kb/
+/experiments/stark/public/
+/experiments/stark/private/
+/experiments/stark/prepared/
+/experiments/stark/pi_full_test/runs/
+/experiments/stark/trials/
+/experiments/stark/astra_runs/
+/experiments/stark/contamination/runs/
+/experiments/stark/contamination/index/
+/experiments/stark/analysis_final/out/
+/experiments/stark/analysis_final/cases/out/
+/experiments/stark/analysis_final/cases/traces/
+/experiments/stark/x1_one_program/sandbox/

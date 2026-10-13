@@ -1,0 +1,8 @@
+Answer the retrieval query from your own knowledge. You do not have access to the knowledge base, its files, or any tools.
+Knowledge base: the STaRK-MAG academic knowledge base built from the Microsoft Academic Graph. Valid answers: papers.
+The query may have several correct answers.
+Return the STaRK benchmark node_id integers of the correct answers. If you remember them, list them; otherwise give your best guesses.
+Return 20 unique integer IDs ranked by confidence, most confident first. Return fewer than 20 only if you cannot give that many.
+Return only JSON with exactly this structure: {"node_ids": [123, 456]}. Do not include Markdown, explanations, or citations outside the JSON.
+
+Query: <QUERY>

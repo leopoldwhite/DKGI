@@ -1,0 +1,8 @@
+Answer the retrieval query from your own knowledge. You do not have access to the knowledge base, its files, or any tools.
+Knowledge base: the STaRK-Prime biomedical knowledge base built from PrimeKG. Valid answers: entities of any of these types: disease, gene/protein, molecular_function, drug, pathway, anatomy, effect/phenotype, biological_process, cellular_component, exposure.
+The query may have several correct answers.
+Return the exact entity names as used in PrimeKG of the correct answers.
+Return 20 unique names ranked by confidence, most confident first. Return fewer than 20 only if you cannot give that many.
+Return only JSON with exactly this structure: {"names": ["...", "..."]}. Do not include Markdown, explanations, or citations outside the JSON.
+
+Query: <QUERY>

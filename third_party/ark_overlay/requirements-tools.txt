@@ -1,0 +1,8 @@
+openai==2.31.0
+litellm==1.78.7
+polars==1.39.3
+tantivy==0.25.1
+pyarrow==23.0.1
+pandas==3.0.2
+numpy==2.4.4
+tqdm==4.70.1

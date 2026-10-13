@@ -1,0 +1,5 @@
+Node records: nodes/NNNN.jsonl, shard number = node_id // 10000.
+Each line has node_id (benchmark ID), node_type, is_candidate, and full attributes.
+IDs inside attributes can be external source IDs; return node_id in predictions.
+Only IDs in candidate_ids.txt are valid retrieval outputs. Other nodes are usable evidence.
+Use shell tools or Python's json/csv modules to read these files.

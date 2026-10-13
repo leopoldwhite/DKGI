@@ -1,0 +1,9 @@
+{
+  "model": "gpt-6-luna",
+  "base_url": null,
+  "api_key_env": "MODEL_API_KEY",
+  "reasoning_effort": "high",
+  "context_window": 272000,
+  "pi_max_turns": 300,
+  "timeout_seconds": 1800
+}

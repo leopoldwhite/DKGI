@@ -1,0 +1,1 @@
+{"node_types": ["author", "institution", "field_of_study", "paper"], "relation_types": ["author___affiliated_with___institution", "paper___cites___paper", "paper___has_topic___field_of_study", "author___writes___paper"], "query": "<QUERY>"}

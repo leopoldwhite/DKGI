@@ -1,0 +1,2 @@
+Corpus directory: {corpus}
+Read DATA_FORMAT.txt and schema.json for the file format, entity types, relation types, and graph interpretation. Nodes are complete local text files. Use shell tools, rg, or Python 3 standard-library modules to search and read them. The corpus is read-only. Writable scratch directory: {scratch}

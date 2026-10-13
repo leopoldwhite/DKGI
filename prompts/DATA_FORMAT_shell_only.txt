@@ -1,0 +1,8 @@
+Node records: nodes/NNNN.jsonl, shard number = node_id // 10000.
+Each line has node_id (benchmark ID), node_type, is_candidate, and full attributes.
+IDs inside attributes can be external source IDs; return node_id in predictions.
+Graph edges: edges/RR.tsv, source_id and target_id columns with a header.
+RR is the relation type ID from schema.json. Stored edge rows are not truncated.
+For adjacency, inspect either endpoint; the official default graph is undirected.
+Preserve relation meaning when interpreting directions or entity roles.
+Only IDs in candidate_ids.txt are valid retrieval outputs. Other nodes are usable evidence.

@@ -34,7 +34,7 @@ exact texts of that annotation step, whose code is not included.
 | `text_constraint_annotation_input_*.txt` | text-constraint tags (user message) | one per dataset (Amazon, MAG, Prime) |
 
 The two text-constraint annotation files produced the per-query tags in `data/query_tags/tags_effective.jsonl`
-(README, Text-constraint tags). The instructions file was sent as the `instructions` (system message) of a
+(see [Text-constraint tags](../docs/reference.md#text-constraint-tags)). The instructions file was sent as the `instructions` (system message) of a
 Responses API request and the input file as its user message, with `<QUERY>` replaced by the query text as a JSON
 string value (escaped as JSON); the input files have no final newline, as sent.
 

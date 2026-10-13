@@ -21,4 +21,5 @@ __pycache__/
 /experiments/stark/analysis_final/out/
 /experiments/stark/analysis_final/cases/out/
 /experiments/stark/analysis_final/cases/traces/
-/experiments/stark/x1_one_program/sandbox/
+/experiments/stark/x1_one_program/sandbox/python3-shim
+/experiments/stark/x1_one_program/sandbox/x1lock.so

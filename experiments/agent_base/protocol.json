@@ -1,9 +1,9 @@
 {
-  "model": "gpt-6-luna",
-  "base_url": null,
-  "api_key_env": "MODEL_API_KEY",
+  "provider": "openai",
+  "model": "gpt-5.4",
   "reasoning_effort": "high",
   "context_window": 272000,
+  "max_tokens": 128000,
   "pi_max_turns": 300,
   "timeout_seconds": 1800
 }

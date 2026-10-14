@@ -54,17 +54,48 @@ cd ~/dkgi
 
 | Variable | Meaning |
 |---|---|
-| `MODEL_BASE_URL` | OpenAI-compatible endpoint (Responses API) serving `gpt-6-luna` and `gpt-6-astra`; required, no default |
-| `MODEL_API_KEY` | API key for that endpoint; passed to the agents by name only |
-| `CODEX_BIN` | optional path of the Codex CLI 0.156.1 binary |
+| `MODEL_PROVIDER` | `openai` (default) or `anthropic`; Pi supports both, Codex supports only OpenAI |
+| `MODEL_NAME` | Model ID available to your official API account; overrides the preset model for a new run |
+| `OPENAI_API_KEY` | Official OpenAI API key, required for live OpenAI requests |
+| `ANTHROPIC_API_KEY` | Official Anthropic API key, required for live Anthropic requests |
+| `MODEL_CONTEXT_WINDOW` | Optional positive token count for the selected model’s context window |
+| `MODEL_MAX_OUTPUT_TOKENS` | Optional positive Pi output-token limit; Pi caps requests at 32,000 tokens; does not configure Codex output |
+| `MODEL_REASONING_EFFORT` | Optional reasoning setting supported by the selected model |
+| `CODEX_BIN` | Optional path of the Codex CLI 0.156.1 binary |
 
-Set `MODEL_BASE_URL` before offline checks as well as live runs. `MODEL_API_KEY` is needed for live model requests.
+Choose one provider. Example configuration (replace placeholders locally; never commit real keys):
 
-`experiments/agent_base/protocol.json` holds the fixed model settings (reasoning effort high, 272,000-token
-context, 1,800 s per attempt, at most 300 Pi turns). Pi requests at most 32,000 output tokens per model request (Pi
-0.65.0's default when no limit is set: the smaller of the model's `maxTokens` and 32,000; the 128,000 in the model
-entries of `dci_run/core.py` and `prompt_val/harness.py` is therefore never reached). The endpoint is read from
-`MODEL_BASE_URL` at run time.
+```bash
+export MODEL_PROVIDER=openai
+export MODEL_NAME="YOUR_OPENAI_MODEL"
+export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+```
+
+For Pi with Anthropic:
+
+```bash
+export MODEL_PROVIDER=anthropic
+export MODEL_NAME="YOUR_ANTHROPIC_MODEL"
+export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
+```
+
+OpenAI uses `https://api.openai.com/v1` and the Responses API; Anthropic uses `https://api.anthropic.com` and the
+Messages API. Pi delegates provider requests, system messages, tool-call exchanges and streaming to its upstream
+provider implementations. Codex retains its native OpenAI Responses integration and rejects Anthropic configurations
+before launching an attempt. The existing harness records execution feedback and keeps its retry and scoring rules.
+The [OpenAI SDK documentation](https://github.com/openai/openai-python) and
+[Anthropic SDK documentation](https://github.com/anthropics/anthropic-sdk-python) describe the official APIs.
+
+Offline `--check` needs no API key and makes no model request. Set `MODEL_PROVIDER` and `MODEL_NAME` for a provider-specific
+preflight; live runs require that provider's key. Official model availability and supported reasoning settings vary by
+account and model. Select a compatible model and its context, output and reasoning limits before a live run.
+
+The release defaults to the official OpenAI model `gpt-5.4`; select `MODEL_NAME` available to your account. This does not change the recorded paper results. `experiments/agent_base/protocol.json` retains the original budgets (reasoning effort high, 272,000-token context,
+1,800 s per attempt, at most 300 Pi turns). Pi requests at most 32,000 output tokens per model request (Pi
+0.65.0's default when no limit is set: the smaller of the model's `maxTokens` and 32,000; the 128,000 in the paper
+model entries is therefore never reached). An explicit `MODEL_NAME` or Anthropic provider changes the paper's model
+configuration; it is a new experiment, not evidence that the reported benchmark has been rerun on that provider.
+Use separate result trees when comparing new provider/model configurations with recorded paper trajectories.
 
 ## Download the exported graphs
 

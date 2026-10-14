@@ -152,14 +152,14 @@ def main():
         return 0
     if args.split == "test-0.1":
         gate_test()
-    if not os.environ.get("MODEL_API_KEY"):
-        raise SystemExit("MODEL_API_KEY is not set")
+    protocol = x.c.val.protocol(harness="pi")
+    x.base.require_api_key(protocol)
+    x.c.val.guard_run_configuration(HERE / "provider-protocol.json", {"pi": protocol}, x.RUNS)
     lock = (HERE / "run.lock").open("a")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         raise SystemExit("Another X1 runner holds run.lock")
-    protocol = x.c.val.protocol()
     state_path = HERE / f"state_{'smoke' if args.smoke else args.split}.json"
     state = {"status": "running", "split": args.split, "arm": x.ARM, "planned": len(jobs), "workers": args.workers,
              "started_at": x.now(), "pid": os.getpid(), "active": [], "stop_reason": None}

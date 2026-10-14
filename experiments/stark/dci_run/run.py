@@ -124,8 +124,8 @@ def main():
         for r in sorted(rows, key=lambda r: (r["split"], r["dataset"], int(r["query_id"]))):
             firsts.setdefault((r["split"], r["dataset"]), r)
         rows = list(firsts.values())
-    if not os.environ.get("MODEL_API_KEY"):
-        raise SystemExit("MODEL_API_KEY is not set")
+    for harness_name in {core.harness_for(group) for group in preset["groups"]}:
+        core.base.require_api_key(core.protocol_for(harness_name))
     log_path = root / f"workflow{tag}.log"
 
     def log(message):

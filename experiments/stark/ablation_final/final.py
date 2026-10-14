@@ -95,11 +95,7 @@ def read(path):
 
 
 def redact(text):
-    text = str(text)
-    secret = os.environ.get("MODEL_API_KEY")
-    if secret:
-        text = text.replace(secret, "[redacted]")
-    return re.sub(r"(?i)(bearer\s+)[^\s\"']+", r"\1[redacted]", text)
+    return base.redact(text)
 
 
 def key(row):
@@ -446,7 +442,7 @@ def h6_audit(attempt):
             if event.get("type") != "provider_request_context":
                 continue
             requests += 1
-            for item in event["payload"].get("input", []):
+            for item in c.adapter.pi_context.provider_items(event["payload"]):
                 if item.get("type") == "function_call":
                     names[item["call_id"]] = item.get("name")
                 elif item.get("type") == "function_call_output":

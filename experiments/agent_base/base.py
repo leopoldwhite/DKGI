@@ -5,6 +5,7 @@ from collections import Counter
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import fcntl
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,13 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parent
+_provider_spec = importlib.util.spec_from_file_location("dkgi_provider", ROOT / "provider.py")
+provider = importlib.util.module_from_spec(_provider_spec)
+_provider_spec.loader.exec_module(provider)
+configure_protocol = provider.configure_protocol
+redact = provider.redact
+require_api_key = provider.require_api_key
+
 REPO = ROOT.parent.parent / "DCI-Agent-Lite"
 LANDLOCK = ROOT.parent / "codex_probe/landlock_exec.py"
 CODEX = Path(shutil.which("codex") or "codex-not-found").resolve()
@@ -63,21 +71,18 @@ def isolation(attempt, corpus, harness):
 
 
 def build_command(attempt, row, arm, protocol):
+    protocol = configure_protocol(protocol, arm["harness"])
     corpus = Path(row["corpus_dir"])
-    env = dict(os.environ)
+    env = provider.process_env(protocol)
     env.update(TMPDIR=str(attempt / "tmp"), PATH=f"{NODE_ROOT}/bin:{CODEX_ROOT}/codex-path:/usr/bin:/bin",
                PI_OFFLINE="1", PYTHONDONTWRITEBYTECODE="1", DCI_CORPUS=str(corpus), DCI_ATTEMPT=str(attempt),
                DCI_CODEX_ROOT=str(CODEX_ROOT), DCI_LANDLOCK=str(LANDLOCK))
-    env.pop("OPENAI_API_KEY", None)
     if arm["harness"] == "pi":
         agent = attempt / "agent"
         agent.mkdir(exist_ok=True)
-        save(agent / "models.json", {"providers": {"openai": {
-            "baseUrl": protocol["base_url"], "apiKey": protocol["api_key_env"],
-            "modelOverrides": {protocol["model"]: {"contextWindow": protocol["context_window"]}},
-        }}})
+        save(agent / "models.json", provider.pi_provider_config(protocol))
         save(agent / "settings.json", {"shellPath": str(ROOT / "sandbox-shell.sh"), "quietStartup": True})
-        cmd = [str(PYTHON), "-m", "dci.benchmark.pi_rpc_runner", "--provider", "openai", "--model", protocol["model"],
+        cmd = [str(PYTHON), "-m", "dci.benchmark.pi_rpc_runner", "--provider", protocol["provider"], "--model", protocol["model"],
                "--tools", "read,bash", "--package-dir", str(REPO / "pi-mono/packages/coding-agent"),
                "--agent-dir", str(agent), "--cwd", str(corpus), "--question-file", str(attempt / "prompt.txt"),
                "--output-dir", str(attempt / "artifacts"), "--max-turns", str(protocol["pi_max_turns"]),
@@ -91,11 +96,13 @@ def build_command(attempt, row, arm, protocol):
             "shell_environment_policy.inherit": '"core"',
             "shell_environment_policy.exclude": '["*KEY*","*TOKEN*","*SECRET*"]',
             "log_dir": json.dumps(str(attempt / "logs")), "sqlite_home": json.dumps(str(attempt / "state")),
-            "model_provider": '"dci"', "model_reasoning_effort": json.dumps(protocol["reasoning_effort"]),
+            "model_provider": '"dkgi_openai"',
             "model_context_window": str(protocol["context_window"]), "features.skip_host_skill_discovery": "true",
-            "model_providers.dci": '{name="DCI",base_url=' + json.dumps(protocol["base_url"]) + ',env_key=' +
+            "model_providers.dkgi_openai": '{name="OpenAI",base_url=' + json.dumps(protocol["base_url"]) + ',env_key=' +
             json.dumps(protocol["api_key_env"]) + ',wire_api="responses",requires_openai_auth=false}',
         }
+        if protocol["reasoning_effort"] != "off":
+            config["model_reasoning_effort"] = json.dumps(protocol["reasoning_effort"])
         for feature in ("shell_snapshot", "plugins", "remote_plugin", "apps", "hooks", "multi_agent", "memories", "browser_use", "computer_use", "image_generation"):
             config[f"features.{feature}"] = "false"
         cmd = [str(CODEX), "-a", "never"]
@@ -129,7 +136,7 @@ else:
     probe = "CORPUS=" + repr(str(corpus)) + "\nDENIED=" + repr([str(ROOT / "private"), str(REPO / "data"), str(attempt.parent), str(Path.home() / ".codex/auth.json"), "/proc/self/environ"]) + "\n" + probe
     outer = isolation(attempt, corpus, arm["harness"])
     subprocess.run(outer + ["/usr/bin/python3", "-S", "-c", probe], cwd=corpus, env=env, check=True, capture_output=True)
-    network_probe = "import os,socket; assert not any(k in os.environ for k in ['MODEL_API_KEY','OPENAI_API_KEY'])\ntry:\n socket.socket()\nexcept PermissionError:\n pass\nelse:\n raise AssertionError('network available')"
+    network_probe = "import os,socket; assert not any(k in os.environ for k in ['MODEL_API_KEY','OPENAI_API_KEY','ANTHROPIC_API_KEY'])\ntry:\n socket.socket()\nexcept PermissionError:\n pass\nelse:\n raise AssertionError('network available')"
     shell = [str(ROOT / "sandbox-shell.sh"), "-c", "python3 -S -c " + shlex.quote(network_probe)]
     subprocess.run(outer + shell, cwd=corpus, env=env, check=True, capture_output=True)
     save(attempt / "preflight.json", {"filesystem": "passed", "shell_wrapper_network_and_credentials": "passed",

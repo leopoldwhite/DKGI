@@ -88,7 +88,8 @@ def record_configuration(protocol, jobs):
     paths += sorted((ROOT / "index").glob("*.json"))
     identity = {"experiment": RUN_NAME, "protocol": protocol, "schedule": jobs, "max_workers": 8, "max_attempts": 6,
                 "native_retry": False, "files": [str(p) for p in paths],
-                "pricing_source": "list price of gpt-6-luna, USD per million tokens: input 0.10, cached input 0.01, output 0.50"}
+                "pricing_source": ("archived gpt-6-luna list rates: input 0.10, cached input 0.01, output 0.50 USD/million"
+                                   if protocol["provider"] == "openai" and protocol["model"] == "gpt-6-luna" else "unknown; cost not estimated")}
     manifest = ROOT / "manifest.json"
     if manifest.exists():
         saved = base.read_json(manifest)
@@ -192,7 +193,7 @@ def execute(job, row, gold, candidates, indexes, protocol, run_name):
                 error_log = attempt / "stderr.txt"
                 if error_log.exists():
                     result["error"] += "\n" + error_log.read_text(errors="replace")[-12000:]
-                result["error"] = result["error"].replace(os.environ.get("MODEL_API_KEY", "\x00"), "[redacted]")
+                result["error"] = base.redact(result["error"])
                 result["retry_reason"] = pv.stark.retry_reason(result, attempt)
                 if RATE.search(result["error"]):
                     result["retry_reason"] = "rate_limit"
@@ -279,7 +280,7 @@ def main():
         print((ROOT / "state.json").read_text())
         return
     with base.job_lock(ROOT):
-        protocol = {**pv.protocol(), "pi_max_turns": 300}
+        protocol = {**pv.protocol(harness="pi"), "pi_max_turns": 300}
         rows, gold, candidates, indexes = load_data()
         smoke, rest = schedule(rows)
         run_name = record_configuration(protocol, smoke + rest)
@@ -302,8 +303,10 @@ def main():
                 if result.get("terminal"):
                     results[key(job)] = result
         snapshot(state, results, {})
-        if not os.environ.get("MODEL_API_KEY"):
-            state.update(status="blocked", error="MODEL_API_KEY absent")
+        try:
+            base.require_api_key(protocol)
+        except ValueError as error:
+            state.update(status="blocked", error=str(error))
             snapshot(state, results, {})
             raise Halt(state["error"])
         for sig in (signal.SIGTERM, signal.SIGINT):

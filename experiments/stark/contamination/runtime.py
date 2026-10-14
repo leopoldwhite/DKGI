@@ -24,11 +24,6 @@ def prepare(attempt, prompt, protocol):
     (attempt / "prompt.txt").write_text(prompt)
     row = {"corpus_dir": str(attempt / "cwd")}
     command, env = base.build_command(attempt, row, ARM, protocol)
-    models = base.read_json(attempt / "agent/models.json")
-    provider = models["providers"]["openai"]
-    provider.pop("modelOverrides", None)
-    provider["models"] = [pv.harness.LUNA_MODEL]
-    base.save(attempt / "agent/models.json", models)
     command[command.index("--tools") + 1] = ""
     command.append("--extra-arg=--no-tools")
     for name in ("blocking_stdout.cjs", "pi_rpc_retry.py"):
@@ -69,7 +64,7 @@ def collect(attempt, require_completed=True):
             raise AssertionError("Provider request contained tools")
         if any(m.get("role") in {"assistant", "toolResult"} for m in event.get("messages", [])):
             raise AssertionError("Provider request contained earlier assistant/tool content")
-        if any(item.get("type") in {"function_call", "function_call_output"} for item in event["payload"].get("input", [])):
+        if any(item.get("type") in {"function_call", "function_call_output"} for item in adapter.pi_context.provider_items(event["payload"])):
             raise AssertionError("Provider request contained earlier assistant/tool content")
     events = base.read_jsonl(events_path)
     assistants = [e["message"] for e in events if e.get("type") == "message_end" and e.get("message", {}).get("role") == "assistant"]

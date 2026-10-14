@@ -29,7 +29,7 @@ experiments/stark/
   *.py (analyze_behavior, align_intent_distribution, plot_intent_distribution, analyze_graph_behavior)
                                  shell/Python command classifiers shared by runners and analysis;
                                  download_original_behavior.py downloads the public DCI-Agent-Lite traces
-experiments/agent_base/          agent process runner: isolation, command lines, collection; protocol.json
+experiments/agent_base/          agent process runner: isolation, command lines, collection; protocol.json; official provider configuration
 experiments/codex_probe/landlock_exec.py   Landlock launcher used for every agent process
 third_party/                     DCI-Agent-Lite patch; ARK overlay for the graph-tool service
 ```

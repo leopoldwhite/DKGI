@@ -25,10 +25,7 @@ def prepare_attempt(attempt, row, protocol, harness, prompt_text):
     arm = ARMS[harness]
     if row.get("split") != "val":
         raise ValueError("Prompt validation accepts only val tasks")
-    if protocol["api_key_env"] != "MODEL_API_KEY":
-        raise ValueError("Unexpected credential environment variable")
-    if protocol["model"] != LUNA_MODEL["id"] or protocol["context_window"] != 272000:
-        raise ValueError("Unexpected model configuration")
+    protocol = base.configure_protocol(protocol, harness=harness)
     if harness == "pi" and protocol.get("pi_max_turns") != 300:
         raise ValueError("Pi requires pi_max_turns=300")
     # Prevent the RPC helper from falling back to an automatic build.
@@ -38,15 +35,6 @@ def prepare_attempt(attempt, row, protocol, harness, prompt_text):
         folder.mkdir(parents=True, exist_ok=True)
     (attempt / "prompt.txt").write_text(prompt_text, encoding="utf-8")
     command, env = base.build_command(attempt, row, arm, protocol)
-    if harness == "pi":
-        path = attempt / "agent/models.json"
-        models = base.read_json(path)
-        provider = models["providers"]["openai"]
-        if provider["apiKey"] != "MODEL_API_KEY" or provider["baseUrl"] != protocol["base_url"]:
-            raise ValueError("Pi provider configuration mismatch")
-        provider.pop("modelOverrides", None)
-        provider["models"] = [LUNA_MODEL]
-        base.save(path, models)
     base.preflight(attempt, row, arm, env)
     denied = [stark.ROOT / "private", stark.ROOT / "public",
               stark.prepare.SOURCE / "data/qa", stark.prepare.SOURCE / "data/skb"]

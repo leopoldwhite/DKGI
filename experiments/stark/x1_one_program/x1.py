@@ -339,7 +339,7 @@ def run_attempt(job, row, gold, candidates, protocol, attempt):
                 result[name] = method()
         except Exception as error:
             result[name + "_error"] = redact(error)
-    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound") or 0.0
+    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound")
     result.update(finished_at=now(), wall_time_seconds=time.monotonic() - started)
     save(attempt / "result.json", result)
     return result
@@ -368,7 +368,7 @@ def try_recover(job, directory, previous, gold, candidates):
             result[name] = method()
         except Exception as error:
             result[name + "_error"] = redact(error)
-    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound") or 0.0
+    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound")
     save(attempt / "result.json", result)
     return f.finalize(job, directory, result)
 

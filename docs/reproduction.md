@@ -5,15 +5,24 @@
 Complete [setup and data preparation](setup.md) first. All commands below start from the repository root unless
 noted. `--check` performs an offline preflight; `--smoke` and experiment runs make model requests and write results.
 
+## Portable provider tests
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+These tests use mocks and synthetic values on macOS or Linux; they make no live API calls and require no API key.
+They verify provider wiring independently of the full Linux sandbox and graph-data setup.
+
 ## A first offline check
 
 ```bash
 python3 experiments/stark/dci_run/run.py pi_full_test --check --datasets prime
 ```
 
-This validates prompts, the harness wiring and isolation for Prime. `MODEL_BASE_URL` must be configured even for
-this offline check; no API key or model call is needed. To run a small live check with the same configuration,
-also set `MODEL_API_KEY`:
+This validates prompts, the harness wiring and isolation for Prime; no API key or model call is needed.
+Choose `MODEL_PROVIDER` and `MODEL_NAME` following the [official API setup](setup.md#environment-variables).
+To run a small live check, set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` for that provider:
 
 ```bash
 python3 experiments/stark/dci_run/run.py pi_full_test --smoke --datasets prime --workers 1
@@ -26,13 +35,19 @@ results report only the synthetic test queries. Other presets and their analysis
 
 ## Running the configurations
 
+The commands and model names below identify the paper configurations. `MODEL_NAME` can select another model
+available to your official API account; Pi additionally supports `MODEL_PROVIDER=anthropic`. Codex configurations
+require `MODEL_PROVIDER=openai`. A changed model/provider is a new experiment and is not expected to reproduce
+the paper numbers. Preserve recorded results and use a separate checkout/result tree for new configurations,
+since the resumable runners skip terminal results already present. No new live benchmark rerun is claimed here.
+
 All runners resume: a question whose `result.json` is terminal is never run again. Attempts that fail for a
 transient reason (timeout, rate limit, connection error, invalid output) are retried with exponential backoff
 within a fixed per-question attempt budget (`dci_run/core.py`, `ablation_final/final.py`,
 `contamination/runner.py`); the closed-book probe runner allows up to six attempts per question, and
 `dci_run/run.py` ends with one further pass in which questions that failed for a technical reason (not a refusal)
 get up to three more attempts. A provider refusal ends the question, and failed questions score 0. The Full DKGI, tool-variant and One program runners provide
-an offline `--check` (no model call; it needs `MODEL_BASE_URL` set and the Codex CLI installed) and a `--smoke`
+an offline `--check` (no model call; it needs the Codex CLI installed) and a `--smoke`
 mode. The closed-book probe runner instead provides `--status` and `--execute`. The validation questions of the tool-variant and One program smoke runs (`ablation_final/selection_val.json`,
 20 per dataset, written on first use; the first of each dataset is its smoke question) are drawn with a fixed seed
 from the STaRK validation questions, leaving out those of the prompt-validation rounds when their selection files

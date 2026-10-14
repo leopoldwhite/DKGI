@@ -26,10 +26,32 @@ def requests(path):
                 yield offset, line, event
 
 
+def provider_items(payload):
+    """Normalize native Responses and Messages tool records for transport-independent audits."""
+    if isinstance(payload.get("input"), list):
+        return payload["input"]
+    if not isinstance(payload.get("messages"), list):
+        raise ValueError("Unsupported provider request payload")
+    items = []
+    for message in payload["messages"]:
+        content = message.get("content", [])
+        if isinstance(content, str):
+            continue
+        for block in content:
+            if block.get("type") == "tool_use":
+                items.append({"type": "function_call", "call_id": block["id"], "name": block["name"]})
+            elif block.get("type") == "tool_result":
+                output = block.get("content", "")
+                if isinstance(output, list):
+                    output = "\n".join(b["text"] for b in output if b.get("type") == "text") or "(see attached image)"
+                items.append({"type": "function_call_output", "call_id": block["tool_use_id"], "output": output})
+    return items
+
+
 def inspect(event):
     messages = {m["toolCallId"].split("|")[0]: m for m in event["messages"]
                 if m.get("role") == "toolResult"}
-    outputs = [item for item in event["payload"]["input"] if item.get("type") == "function_call_output"]
+    outputs = [item for item in provider_items(event["payload"]) if item.get("type") == "function_call_output"]
     assert len(outputs) == len(messages), "Request tool result coverage differs"
     assert {item["call_id"] for item in outputs} == messages.keys(), "Request tool IDs differ"
     records = []

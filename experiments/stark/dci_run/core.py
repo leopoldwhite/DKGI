@@ -66,8 +66,7 @@ def read_jsonl(path):
 
 
 def redact(text):
-    key = os.environ.get("MODEL_API_KEY")
-    return text.replace(key, "[redacted]") if key else text
+    return base.redact(text)
 
 
 # ---------------------------------------------------------------- data
@@ -115,24 +114,26 @@ OTHER_MODELS = {"gpt-6-astra": ASTRA_MODEL}
 
 
 def model_name():
-    """Backbone for OpenAI-compatible harnesses; set per preset by run.py via DCI_MODEL (default gpt-6-luna)."""
-    return os.environ.get("DCI_MODEL", "gpt-6-luna")
+    """An explicit model wins over the paper reproduction preset."""
+    if os.environ.get("MODEL_NAME"):
+        return os.environ["MODEL_NAME"]
+    if os.environ.get("MODEL_PROVIDER", "openai") == "anthropic":
+        return base.configure_protocol({})["model"]
+    return os.environ.get("DCI_MODEL") or base.configure_protocol({})["model"]
 
 
 def use_model(common):
-    name = model_name()
-    if name != common["model"]:
-        definition = OTHER_MODELS[name]
-        harness.LUNA_MODEL = definition        # the val harness checks and writes this definition for Pi
-        common["model"] = name
-    return common
+    settings = dict(common, model=model_name())
+    return base.configure_protocol(settings)
 
 
 def model_cost(result, harness_name):
     name = model_name()
+    if os.environ.get("MODEL_PROVIDER", "openai") != "openai":
+        return None
     if name == "gpt-6-luna":
         return runner.cost(result, harness_name)
-    if not result.get("usage_complete"):
+    if name not in OTHER_MODELS or not result.get("usage_complete"):
         return None
     rate = {k: v / 1e6 for k, v in OTHER_MODELS[name]["cost"].items()}
     raw = result["usage_raw"]
@@ -144,7 +145,7 @@ def model_cost(result, harness_name):
 
 
 def protocol_for(harness_name):
-    common = use_model(runner.protocol())
+    common = use_model(runner.protocol(harness=harness_name))
     if harness_name == "pi":
         common["pi_max_turns"] = 300
     return common
@@ -189,7 +190,7 @@ def h6_audit(attempt):
     for raw in open(source, "rb"):
         if b'"provider_request_context"' not in raw[:200]:
             continue
-        items = json.loads(raw)["payload"]["input"]
+        items = adapter.pi_context.provider_items(json.loads(raw)["payload"])
         audit["requests"] += 1
         names = {i["call_id"]: i.get("name") for i in items if i.get("type") == "function_call"}
         for i in items:
@@ -219,7 +220,8 @@ def run_attempt(job, attempt, gold, candidates, protocol):
         raise ValueError("Attempt path must not reveal the experiment: " + str(attempt))
     result = {"group": group, "harness": harness_name, "dataset": row["dataset"], "split": row["split"],
               "query_id": str(row["query_id"]), "attempt_path": str(attempt), "status": "running",
-              "started_at": now(), "terminal": False, "metrics": {}}
+              "started_at": now(), "terminal": False, "metrics": {},
+              "provider": protocol["provider"], "model": protocol["model"]}
     save(attempt / "result.json", result)
     phase, started = "preflight", time.monotonic()
     env = {}
@@ -322,6 +324,7 @@ def run_queue(jobs, labels, candidates, root, runs_dir, workers, log, control_na
     control = root / control_name
     save(control, {"workers": workers})  # the launch argument wins; edit the file later to change it live
     protocols = {h: protocol_for(h) for h in {j["harness"] for j in jobs}}
+    runner.guard_run_configuration(root / f"{runs_dir}{Path(control_name).stem}-protocol.json", protocols, root / runs_dir)
     pending = [j for j in jobs if not (result_path(root, runs_dir, j["group"], j["row"]).exists() and
                                         json.loads(result_path(root, runs_dir, j["group"], j["row"]).read_text()).get("terminal"))]
     done = len(jobs) - len(pending)

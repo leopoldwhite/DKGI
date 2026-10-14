@@ -1,6 +1,7 @@
 <div align="center">
 
 <h1>DKGI</h1>
+<p><strong>Let agents build the tools they need to search knowledge graphs.</strong></p>
 <h3>Knowledge Graphs as Files:<br>An Agent Harness Where Tool Creation and Tool Use Co-Evolve</h3>
 
 <p>
@@ -11,7 +12,10 @@
 <p><sup>1</sup>Texas A&amp;M University &nbsp; <sup>2</sup>University of Oregon</p>
 
 <p>
-  <a href="https://arxiv.org/abs/2610.18616"><img src="https://img.shields.io/badge/arXiv-2610.18616-b31b1b.svg" alt="arXiv: 2610.18616"></a>
+  <a href="https://arxiv.org/abs/2610.18616"><img src="https://img.shields.io/badge/Paper-arXiv%3A2610.18616-b31b1b?style=flat-square" alt="Paper: arXiv 2610.18616"></a>
+  <a href="https://yuyangbai.com/dkgi/"><img src="https://img.shields.io/badge/Project-Website-2563eb?style=flat-square" alt="Project website"></a>
+  <a href="https://github.com/leopoldwhite/DKGI"><img src="https://img.shields.io/badge/Code-GitHub-24292f?style=flat-square" alt="Code on GitHub"></a>
+  <a href="https://huggingface.co/collections/yuyangbai/dkgi"><img src="https://img.shields.io/badge/Data-Hugging%20Face-ffcc33?style=flat-square" alt="Graphs and trajectories on Hugging Face"></a>
 </p>
 
 <p>
@@ -23,7 +27,9 @@
 
 <p>
   <a href="#overview">Overview</a> &nbsp;·&nbsp;
+  <a href="#results">Results</a> &nbsp;·&nbsp;
   <a href="#quickstart">Quickstart</a> &nbsp;·&nbsp;
+  <a href="#official-model-apis">Model APIs</a> &nbsp;·&nbsp;
   <a href="#reproduction">Reproduction</a> &nbsp;·&nbsp;
   <a href="#citation">Citation</a>
 </p>
@@ -44,6 +50,12 @@ the graph files and ranks the gold paper first.*
 The repository contains graph export code, runners for Full DKGI and its controlled variants, closed-book probes,
 exact prompts, and scripts for the paper's analysis. The exported graphs and recorded test trajectories are hosted
 on Hugging Face.
+
+### Why DKGI?
+
+- **Graphs as files.** Inspect complete node and edge files with Python, shell search and file tools.
+- **Tools evolve during a task.** Revise graph-access code using execution feedback rather than a fixed tool API.
+- **Training-free evaluation.** Evaluate on 7,108 STaRK synthetic test queries, with controlled variants and recorded trajectories.
 
 ## Results
 
@@ -69,9 +81,12 @@ git clone https://github.com/leopoldwhite/DKGI.git ~/dkgi
 cd ~/dkgi
 ```
 
-Complete the [harness and dependency setup](docs/setup.md#requirements), including the pinned Pi/DCI-Agent-Lite
-and Codex CLI versions, and set [`MODEL_BASE_URL`](docs/setup.md#environment-variables). Then download the exported
-graphs and run an offline preflight:
+### 1. Install the harnesses
+
+Complete the [Linux harness and dependency setup](docs/setup.md#requirements), including **Pi 0.65.0** and
+**Codex CLI 0.156.1**. The runners preserve the released prompts, isolation and experiment commands.
+
+### 2. Download the graphs and check offline
 
 ```bash
 hf download yuyangbai/DKGI-STaRK-Graphs --repo-type dataset --local-dir experiments/stark \
@@ -80,16 +95,61 @@ python3 experiments/stark/use_downloaded_graphs.py
 python3 experiments/stark/dci_run/run.py pi_full_test --check --datasets prime
 ```
 
+`--check` validates prompts, harness wiring and execution isolation without a model call or API key.
+
+## Official model APIs
+
+| Harness | OpenAI | Anthropic |
+|:--|:--|:--|
+| Pi | Responses API | Messages API |
+| Codex | Responses API | Unsupported; fails before execution |
+
+Choose **one** provider and replace the placeholders with a model available to your account and its API key:
+
+```bash
+# OpenAI — Pi or Codex
+export MODEL_PROVIDER=openai
+export MODEL_NAME="YOUR_OPENAI_MODEL"
+export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
+```
+
+```bash
+# Anthropic — Pi
+export MODEL_PROVIDER=anthropic
+export MODEL_NAME="YOUR_ANTHROPIC_MODEL"
+export ANTHROPIC_API_KEY="YOUR_ANTHROPIC_API_KEY"
+```
+
+Requests use the official `https://api.openai.com/v1` or `https://api.anthropic.com` endpoints.
+[Provider configuration and capability scope](docs/setup.md#environment-variables) describes the harness integration.
+Keep real keys out of source files and committed configuration.
+
+### Run a small live check
+
+```bash
+python3 experiments/stark/dci_run/run.py pi_full_test --smoke --datasets prime --workers 1
+```
+
+This makes paid model requests for **two questions**. Changing the provider or model creates a new experimental
+configuration; the reported paper results above are retained, and these instructions do not claim a new benchmark rerun.
+
 ## Reproduction
 
-The preflight checks prompts and execution isolation without a model call or API key. Live runs additionally
-require `MODEL_API_KEY`; [reproduction instructions](docs/reproduction.md) cover smoke checks, full runs and analysis.
+Portable provider checks use synthetic fixtures without network access or credentials:
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+[Reproduction instructions](docs/reproduction.md) cover full runs, controlled variants, result locations and analysis.
+The [configuration map](docs/reference.md#names-used-in-the-paper-and-in-the-code) connects paper settings to the
+released presets. Use the same model, prompts, budgets and evaluation setup to compare with a paper configuration.
 
 ## Documentation and data
 
 | Guide or resource | Contents |
 |:--|:--|
-| [Setup and data](docs/setup.md) | Linux requirements, pinned dependencies, endpoint configuration and graph preparation |
+| [Setup and data](docs/setup.md) | Linux requirements, pinned dependencies, official provider configuration and graph preparation |
 | [Reproduction](docs/reproduction.md) | Offline checks, experiment commands, trajectory locations and analysis |
 | [Repository reference](docs/reference.md) | Code layout, paper-to-code configuration map and text-constraint tags |
 | [Exact prompts](prompts/README.md) | Final prompt, controlled variants, probes and annotation instructions |

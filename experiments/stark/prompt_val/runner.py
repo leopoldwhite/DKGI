@@ -21,20 +21,30 @@ ROOT = Path(__file__).resolve().parent
 STOP = threading.Event()
 
 
-def protocol():
-    """Model settings of every run. The endpoint comes from MODEL_BASE_URL (no default), the key from MODEL_API_KEY."""
-    base_url = os.environ.get("MODEL_BASE_URL")
-    if not base_url:
-        raise RuntimeError("Set MODEL_BASE_URL to the OpenAI-compatible endpoint (Responses API) of the model")
-    configured = {k: v for k, v in base.read_json(base.ROOT / "protocol.json").items()
-                  if k in ("model", "base_url", "api_key_env", "reasoning_effort", "context_window", "timeout_seconds")}
-    configured.update(model="gpt-6-luna", base_url=base_url, seed=stark.prepare.SEED, max_returned_ids=100,
-                      harness="codex_native",
-                      scoring="Hit/Recall at k; truncated MRR@100; invalid and duplicate IDs occupy rank with no gain",
-                      codex_version=subprocess.check_output([str(base.CODEX), "--version"], text=True).strip())
-    if configured["codex_version"] != CODEX_VERSION:
-        raise ValueError(f"Expected {CODEX_VERSION}, found {configured['codex_version']} at {base.CODEX}")
+def protocol(harness=None):
+    """Official provider settings, preserving paper defaults unless explicitly overridden."""
+    configured = base.configure_protocol(base.read_json(base.ROOT / "protocol.json"), harness=harness)
+    configured.update(seed=stark.prepare.SEED, max_returned_ids=100,
+                      scoring="Hit/Recall at k; truncated MRR@100; invalid and duplicate IDs occupy rank with no gain")
+    if harness == "codex":
+        configured["codex_version"] = subprocess.check_output([str(base.CODEX), "--version"], text=True).strip()
+        if configured["codex_version"] != CODEX_VERSION:
+            raise ValueError(f"Expected {CODEX_VERSION}, found {configured['codex_version']} at {base.CODEX}")
     return configured
+
+
+def guard_run_configuration(path, protocols, results_directory=None):
+    """Do not reuse terminal results across provider/model changes."""
+    path = Path(path)
+    identity = {h: {k: p[k] for k in ("provider", "model", "api")} for h, p in protocols.items()}
+    if path.exists():
+        if base.read_json(path) != identity:
+            raise ValueError("Run provider/model changed; use a new output directory")
+    else:
+        changed = os.environ.get("MODEL_NAME") or any(p["provider"] != "openai" or p["model"] not in ("gpt-6-luna", "gpt-6-astra") for p in protocols.values())
+        if changed and any(Path(results_directory or path.parent).glob("**/result.json")):
+            raise ValueError("Existing results have no provider identity; use a new output directory")
+        base.save(path, identity)
 
 
 def key(row):
@@ -65,6 +75,10 @@ def load_data():
 
 
 def cost(result, harness_name):
+    provider = os.environ.get("MODEL_PROVIDER", "openai")
+    model = os.environ.get("MODEL_NAME", os.environ.get("DCI_MODEL", ""))
+    if provider != "openai" or model != "gpt-6-luna":
+        return None
     if not result.get("usage_complete"):
         return None
     raw = result["usage_raw"]

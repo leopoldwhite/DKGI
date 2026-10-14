@@ -1,8 +1,8 @@
 <div align="center">
 
-<h1>DKGI</h1>
-<p><strong>Let agents build the tools they need to search knowledge graphs.</strong></p>
-<h3>Knowledge Graphs as Files:<br>An Agent Harness Where Tool Creation and Tool Use Co-Evolve</h3>
+<p><strong>DKGI</strong></p>
+<h2>Knowledge Graphs as Files:<br>An Agent Harness Where Tool Creation and Tool Use Co-Evolve</h2>
+<p><em>Let agents build the tools they need to search knowledge graphs.</em></p>
 
 <p>
   <a href="https://yuyangbai.com/">Yuyang Bai</a><sup>1</sup>,

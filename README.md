@@ -1,6 +1,5 @@
 <div align="center">
 
-<p><strong>DKGI</strong></p>
 <h2>Knowledge Graphs as Files:<br>An Agent Harness Where Tool Creation<br>and Tool Use Co-Evolve</h2>
 <p><em>Let agents build the tools they need to search knowledge graphs.</em></p>
 

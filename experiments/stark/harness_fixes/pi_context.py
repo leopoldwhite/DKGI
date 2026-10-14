@@ -33,13 +33,20 @@ def provider_items(payload):
     if not isinstance(payload.get("messages"), list):
         raise ValueError("Unsupported provider request payload")
     items = []
+    if payload.get("system"):
+        items.append({"role": "system", "content": payload["system"]})
     for message in payload["messages"]:
         content = message.get("content", [])
         if isinstance(content, str):
+            items.append({"role": message["role"], "content": content})
             continue
+        text = [block for block in content if block.get("type") == "text"]
+        if text:
+            items.append({"role": message["role"], "content": text})
         for block in content:
             if block.get("type") == "tool_use":
-                items.append({"type": "function_call", "call_id": block["id"], "name": block["name"]})
+                items.append({"type": "function_call", "call_id": block["id"], "name": block["name"],
+                              "arguments": json.dumps(block["input"])})
             elif block.get("type") == "tool_result":
                 output = block.get("content", "")
                 if isinstance(output, list):

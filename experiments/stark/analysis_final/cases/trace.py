@@ -9,7 +9,7 @@ Usage (from experiments/stark):
 
 Sources of model-visible output (same rule as analysis_final/common.py):
   * Pi (Full DKGI and the ablation variants): attempt/artifacts/events.jsonl, provider_request_context
-    payload.input function_call / function_call_output, union over all requests.
+    native Responses or Messages tool records, union over all requests.
   * Codex: attempt/stdout.jsonl command_execution items (command and raw aggregated output; the raw output
     is a superset of what the model saw) plus attempt/model_tool_outputs.jsonl when present.
 """
@@ -22,6 +22,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 STARK = HERE.parents[1]
+sys.path.insert(0, str(STARK / "harness_fixes"))
+from pi_context import provider_items  # noqa: E402
 
 # Paper names; internal ids only as keys.
 CONFIGS = {
@@ -154,7 +156,7 @@ def pi_trace(attempt):
                 n_exec += 1
             if b'"provider_request_context"' not in head:
                 continue
-            for it in json.loads(raw).get("payload", {}).get("input", []):
+            for it in provider_items(json.loads(raw).get("payload", {})):
                 t = it.get("type")
                 if t == "function_call" and it["call_id"] not in calls:
                     try:

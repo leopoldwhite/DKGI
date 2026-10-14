@@ -19,13 +19,6 @@
 </p>
 
 <p>
-  <a href="https://arxiv.org/abs/2610.18616">Paper</a> &nbsp;·&nbsp;
-  <a href="https://yuyangbai.com/dkgi/">Project</a> &nbsp;·&nbsp;
-  <a href="https://github.com/leopoldwhite/DKGI">Code</a> &nbsp;·&nbsp;
-  <a href="https://huggingface.co/collections/yuyangbai/dkgi">Data</a>
-</p>
-
-<p>
   <a href="#overview">Overview</a> &nbsp;·&nbsp;
   <a href="#results">Results</a> &nbsp;·&nbsp;
   <a href="#quickstart">Quickstart</a> &nbsp;·&nbsp;

@@ -8,7 +8,7 @@ Result layouts handled:
   * raw jsonl   one row per final result (prompt-selection round on val)
 
 Model-visible tool output:
-  * Pi      attempt/artifacts/events.jsonl, provider_request_context payload.input function_call_output
+  * Pi      attempt/artifacts/events.jsonl, native Responses or Messages provider_request_context
             (last request; union over all requests when the run compacted)
   * Codex   attempt/model_tool_outputs.jsonl
   * Codex without a recorded model input: stdout.jsonl aggregated_output is the raw command output,
@@ -39,6 +39,8 @@ sys.path.insert(0, str(STARK))
 import analyze_behavior as base  # noqa: E402  (existing shared shell/AST parser)
 import align_intent_distribution as align  # noqa: E402  (aligned nine-category classifier)
 import analyze_graph_behavior as graph  # noqa: E402  (graph operations inside Python)
+sys.path.insert(0, str(STARK / "harness_fixes"))
+from pi_context import provider_items  # noqa: E402
 
 DATASETS = ("amazon", "mag", "prime")
 DS_LABEL = {"amazon": "Amazon", "mag": "MAG", "prime": "Prime", "all": "All"}
@@ -58,7 +60,7 @@ FOUND = re.compile(r"found ([0-9]+) results")
 CODEX_EST_LIMIT = 40_000  # Codex without recorded model input: Codex truncates at ~10k approx tokens (~40 KB), head+tail
 
 # Bump when the per-query feature logic changes; cached rows with another version are re-extracted.
-FEATURE_VERSION = "2026-09-29-d"
+FEATURE_VERSION = "2026-10-14-providers"
 
 # Figure/table groupings: main-text figures use the 710 subset with the tool variants.
 MAIN_710 = ("A4", "H", "A1", "A2", "A3", "A5", "A6")
@@ -235,7 +237,7 @@ def pi_calls(attempt, union):
         return None
     calls, outs = {}, {}
     for raw in raws:
-        items = json.loads(raw).get("payload", {}).get("input", [])
+        items = provider_items(json.loads(raw).get("payload", {}))
         for it in items:
             t = it.get("type")
             if t == "function_call" and it["call_id"] not in calls:
@@ -331,6 +333,9 @@ PRICE = {"input": 0.10, "cached": 0.01, "output": 0.50}  # USD per million token
 
 def price_equivalent(result):
     """Official-price equivalent from recorded usage (lower bound; used only when no cost was recorded)."""
+    if (result.get("provider") or result.get("model")) and (
+            result.get("provider") != "openai" or result.get("model") != "gpt-6-luna"):
+        return None
     u = result.get("total_usage_raw") or result.get("usage_raw") or {}
     inp, cached, out = u.get("input_tokens"), u.get("cached_input_tokens") or 0, u.get("output_tokens")
     if inp is None or out is None:

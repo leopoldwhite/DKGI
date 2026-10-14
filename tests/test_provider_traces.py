@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 
@@ -24,7 +25,10 @@ class ProviderTraceTests(unittest.TestCase):
             {'role': 'assistant', 'content': [{'type': 'tool_use', 'id': 'call_1', 'name': 'bash', 'input': {'command': 'true'}}]},
             {'role': 'user', 'content': [{'type': 'tool_result', 'tool_use_id': 'call_1', 'content': [{'type': 'text', 'text': 'first'}, {'type': 'text', 'text': 'second'}]}]}]}
         self.assertEqual(self.normalize(payload), [
-            {'type': 'function_call', 'call_id': 'call_1', 'name': 'bash'},
+            {'role': 'system', 'content': 'synthetic system'},
+            {'role': 'user', 'content': 'synthetic question'},
+            {'type': 'function_call', 'call_id': 'call_1', 'name': 'bash',
+             'arguments': json.dumps({'command': 'true'})},
             {'type': 'function_call_output', 'call_id': 'call_1', 'output': 'first\nsecond'}])
         self.assertEqual(payload['system'], 'synthetic system')
 

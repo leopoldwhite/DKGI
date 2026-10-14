@@ -22,6 +22,7 @@ _provider_spec.loader.exec_module(provider)
 configure_protocol = provider.configure_protocol
 redact = provider.redact
 require_api_key = provider.require_api_key
+total_cost = provider.total_cost
 
 REPO = ROOT.parent.parent / "DCI-Agent-Lite"
 LANDLOCK = ROOT.parent / "codex_probe/landlock_exec.py"
@@ -30,6 +31,7 @@ CODEX_ROOT = CODEX.parent.parent
 NODE_ROOT = Path(shutil.which("node") or "node-not-found").resolve().parent.parent
 PYTHON = REPO / ".venv/bin/python"
 PYTHON_ROOT = PYTHON.resolve().parent.parent
+MODEL_CONFIGURATION_KEYS = ("provider", "model", "api", "reasoning_effort", "context_window", "max_tokens")
 
 
 def read_json(path):
@@ -72,6 +74,7 @@ def isolation(attempt, corpus, harness):
 
 def build_command(attempt, row, arm, protocol):
     protocol = configure_protocol(protocol, arm["harness"])
+    save(attempt / "model_configuration.json", {key: protocol[key] for key in MODEL_CONFIGURATION_KEYS})
     corpus = Path(row["corpus_dir"])
     env = provider.process_env(protocol)
     env.update(TMPDIR=str(attempt / "tmp"), PATH=f"{NODE_ROOT}/bin:{CODEX_ROOT}/codex-path:/usr/bin:/bin",
@@ -235,6 +238,11 @@ def collect(attempt, harness, require_completed=True):
     if require_completed and not final:
         raise RuntimeError("No final answer")
     result["prediction"] = final
+    configuration_path = attempt / "model_configuration.json"
+    if configuration_path.exists():
+        saved = read_json(configuration_path)
+        identity = {key: saved[key] for key in MODEL_CONFIGURATION_KEYS}
+        result.update(model_configuration=identity, provider=identity["provider"], model=identity["model"])
     return result
 
 

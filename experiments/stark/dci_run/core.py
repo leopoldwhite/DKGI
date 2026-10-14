@@ -300,7 +300,8 @@ def run_question(job, labels, candidates, protocols, root, runs_dir, extra_attem
     past = [json.loads(p.read_text()) for p in attempts]
     last = past[-1] if past else {"status": "failed", "error": "no attempt result", "metrics": {}}
     summary = {**last, "terminal": True, "attempt_count": len(list(directory.glob("attempt_*"))),
-               "cost_usd": sum(r.get("attempt_cost_usd") or 0 for r in past),
+               "cost_usd": base.total_cost(past) if len(past) == len(list(directory.glob("attempt_*"))) else None,
+               "unknown_cost_attempts": sum(r.get("attempt_cost_usd") is None for r in past),
                "total_input_tokens": sum(r.get("input_tokens") or 0 for r in past),
                "total_output_tokens": sum(r.get("output_tokens") or 0 for r in past),
                "total_wall_seconds": sum(r.get("wall_time_seconds") or 0 for r in past),

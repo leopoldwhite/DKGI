@@ -36,10 +36,10 @@ def protocol(harness=None):
 def guard_run_configuration(path, protocols, results_directory=None):
     """Do not reuse terminal results across provider/model changes."""
     path = Path(path)
-    identity = {h: {k: p[k] for k in ("provider", "model", "api")} for h, p in protocols.items()}
+    identity = {h: {k: p[k] for k in ("provider", "model", "api", "reasoning_effort", "context_window", "max_tokens")} for h, p in protocols.items()}
     if path.exists():
         if base.read_json(path) != identity:
-            raise ValueError("Run provider/model changed; use a new output directory")
+            raise ValueError("Run inference configuration changed; use a new output directory")
     else:
         changed = os.environ.get("MODEL_NAME") or any(p["provider"] != "openai" or p["model"] not in ("gpt-6-luna", "gpt-6-astra") for p in protocols.values())
         if changed and any(Path(results_directory or path.parent).glob("**/result.json")):
@@ -88,13 +88,18 @@ def cost(result, harness_name):
             raw["cached_input_tokens"] * .01 + raw["output_tokens"] * .50) / 1e6
 
 
+def format_cost(value):
+    return "unknown" if value is None else f"${value:.4f}"
+
+
 def finalize(result, directory):
     history = [base.read_json(p) for p in sorted(directory.glob("attempt_*/result.json"))]
     result.update(terminal=True, attempt_count=len(list(directory.glob("attempt_*"))),
                   total_wall_seconds=sum(r.get("wall_time_seconds", 0) for r in history),
                   total_input_tokens=sum(r.get("input_tokens") or 0 for r in history),
                   total_output_tokens=sum(r.get("output_tokens") or 0 for r in history),
-                  cost_usd=sum(r.get("attempt_cost_usd") or 0 for r in history),
+                  cost_usd=base.total_cost(history) if len(history) == len(list(directory.glob("attempt_*"))) else None,
+                  unknown_cost_attempts=sum(r.get("attempt_cost_usd") is None for r in history) + len(list(directory.glob("attempt_*"))) - len(history),
                   usage_incomplete=len(history) < len(list(directory.glob("attempt_*"))) or
                   any(not r.get("usage_complete") for r in history))
     stark.prepare.save(directory / "result.json", result)

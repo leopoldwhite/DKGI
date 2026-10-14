@@ -547,7 +547,7 @@ def run_attempt(job, row, gold, candidates, protocol, attempt):
                 result[name] = method()
         except Exception as error:
             result[name + "_error"] = redact(error)
-    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound") or 0.0
+    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound")
     result.update(finished_at=now(), wall_time_seconds=time.monotonic() - started)
     save(attempt / "result.json", result)
     return result
@@ -572,7 +572,7 @@ def finalize(job, directory, last, reason=None):
     out = dict(last)
     out.update(arm=job["arm"], dataset=job["dataset"], query_id=job["query_id"], split=job["split"],
                terminal=True, attempt_count=len(history), finished_at=now(),
-               cost_usd=sum(r.get("attempt_cost_usd") or 0.0 for r in history),
+               cost_usd=base.total_cost(history) if len(history) == len(list(directory.glob("attempt_*"))) else None,
                total_input_tokens=sum(r.get("input_tokens") or 0 for r in history),
                total_output_tokens=sum(r.get("output_tokens") or 0 for r in history),
                total_wall_seconds=sum(r.get("wall_time_seconds") or 0 for r in history),
@@ -606,7 +606,7 @@ def try_recover(job, directory, previous, gold, candidates):
             result[name] = method()
         except Exception as error:
             result[name + "_error"] = redact(error)
-    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound") or 0.0
+    result["attempt_cost_usd"] = result.get("observed_cost_usd_lower_bound")
     save(attempt / "result.json", result)
     return finalize(job, directory, result)
 

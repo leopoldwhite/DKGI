@@ -132,6 +132,54 @@ class ProviderTests(unittest.TestCase):
             self.assertIn('--ignore-user-config', cmd)
             self.assertEqual(env['OPENAI_API_KEY'], 'synthetic-test-value')
 
+    def test_command_records_nonsecret_actual_model_configuration(self):
+        with tempfile.TemporaryDirectory() as d, patch.dict(base.os.environ, {
+            'MODEL_PROVIDER': 'anthropic', 'MODEL_NAME': 'claude-opus-4-6',
+            'ANTHROPIC_API_KEY': 'synthetic-test-value'}, clear=True):
+            attempt = Path(d)
+            base.build_command(attempt, {'corpus_dir': d},
+                               {'harness': 'pi', 'context_level': 'level3'}, self.protocol)
+            path = attempt / 'model_configuration.json'
+            self.assertTrue(path.is_file(), 'Actual model configuration must be recorded')
+            identity = json.loads(path.read_text())
+            self.assertEqual(set(identity), {'provider', 'model', 'api', 'reasoning_effort',
+                                             'context_window', 'max_tokens'})
+            self.assertEqual(identity['provider'], 'anthropic')
+            self.assertEqual(identity['model'], 'claude-opus-4-6')
+            self.assertNotIn('synthetic-test-value', path.read_text())
+
+    def test_collect_returns_recorded_identity_for_both_harnesses(self):
+        identity = {'provider': 'anthropic', 'model': 'claude-sonnet-4-6',
+                    'api': 'anthropic-messages', 'reasoning_effort': 'high',
+                    'context_window': 200000, 'max_tokens': 64000}
+        for harness in ['pi', 'codex']:
+            with self.subTest(harness=harness), tempfile.TemporaryDirectory() as d:
+                attempt = Path(d)
+                artifacts = attempt / 'artifacts'
+                artifacts.mkdir()
+                if harness == 'pi':
+                    state = {'status': 'completed', 'messages': [{'event': 'message_end',
+                             'message': {'role': 'assistant', 'usage': {'input': 2, 'output': 1}}}],
+                             'tool_calls': []}
+                    (artifacts / 'state.json').write_text(json.dumps(state))
+                    (artifacts / 'events.jsonl').write_text('')
+                    (artifacts / 'final.txt').write_text('answer')
+                else:
+                    identity = dict(identity, provider='openai', model='gpt-5.4', api='openai-responses')
+                    (attempt / 'stdout.jsonl').write_text(json.dumps({'type': 'turn.completed',
+                             'usage': {'input_tokens': 2, 'output_tokens': 1}}) + '\n')
+                    (attempt / 'final.txt').write_text('answer')
+                (attempt / 'model_configuration.json').write_text(json.dumps(identity))
+                result = base.collect(attempt, harness)
+                self.assertEqual(result.get('model_configuration'), identity)
+                self.assertEqual(result.get('provider'), identity['provider'])
+                self.assertEqual(result.get('model'), identity['model'])
+                (attempt / 'model_configuration.json').unlink()
+                legacy = base.collect(attempt, harness)
+                self.assertNotIn('model_configuration', legacy)
+                self.assertNotIn('provider', legacy)
+                self.assertNotIn('model', legacy)
+
 
 if __name__ == '__main__':
     unittest.main()

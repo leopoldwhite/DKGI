@@ -46,7 +46,7 @@ base, graph = C.base, C.graph
 OUTDIR = C.OUT / "coevolution"
 CACHE = OUTDIR / "cache"
 # Plain-text version of the extraction logic; cached rows with another value are re-extracted.
-VERSION = "2026-10-02-j"
+VERSION = "2026-10-14-providers"
 
 SIM_CAP = 4000          # characters compared per program (difflib ratio)
 THRESHOLDS = (0.5, 0.8)
@@ -358,7 +358,7 @@ def pi_trace(attempt, union):
         return None
     calls, outs, prompt = {}, {}, ""
     for raw in prc:
-        items = json.loads(raw).get("payload", {}).get("input", [])
+        items = C.provider_items(json.loads(raw).get("payload", {}))
         for it in items:
             t = it.get("type")
             if t == "function_call":

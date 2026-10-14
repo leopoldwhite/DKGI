@@ -66,6 +66,9 @@ def finalize(result, directory):
     result = original_finalize(result, directory)
     history = [runner.base.read_json(p) for p in directory.glob("attempt_*/result.json")]
     result["usage_incomplete"] |= any(r.get("retry_usage_incomplete", False) for r in history)
-    result["cost_usd"] = sum(r.get("observed_cost_usd_lower_bound") or r.get("attempt_cost_usd") or 0 for r in history)
+    costs = [{"attempt_cost_usd": r.get("observed_cost_usd_lower_bound")
+              if r.get("observed_cost_usd_lower_bound") is not None else r.get("attempt_cost_usd")} for r in history]
+    result["cost_usd"] = runner.base.total_cost(costs) if len(costs) == result["attempt_count"] else None
+    result["unknown_cost_attempts"] = sum(r["attempt_cost_usd"] is None for r in costs) + result["attempt_count"] - len(costs)
     runner.base.save(directory / "result.json", result)
     return result

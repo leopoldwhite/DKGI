@@ -98,7 +98,7 @@ def persist_failure(job, error):
     f.save(path, {**previous, **job, "status": "failed", "terminal": True, "error_phase": "queue_boundary",
                   "error_type": type(error).__name__, "error": f.redact(repr(error)), "metrics": {},
                   "failure_kind": "queue_boundary_exception", "finished_at": f.now(),
-                  "cost_usd": previous.get("cost_usd", 0.0), "total_input_tokens": previous.get("total_input_tokens", 0),
+                  "cost_usd": previous.get("cost_usd"), "total_input_tokens": previous.get("total_input_tokens", 0),
                   "total_output_tokens": previous.get("total_output_tokens", 0), "tool_calls": previous.get("tool_calls", 0)})
 
 
@@ -199,7 +199,8 @@ def main():
                             "failure_rate": failed / len(values) if values else None,
                             "alert_over_2pct": bool(values) and failed / len(values) > 0.02}
         state.update(terminal=len(terminal), per_arm=per_arm, heartbeat=f.now(),
-                     cost_usd=sum(r.get("cost_usd") or 0 for r in terminal))
+                     cost_usd=f.base.total_cost(terminal, "cost_usd"),
+                     unknown_cost_items=sum(r.get("cost_usd") is None for r in terminal))
         f.save(state_path, state)
 
     streak = 0
@@ -236,7 +237,7 @@ def main():
                     continue
                 m = result.get("metrics") or {}
                 print(f"{f.jobkey(job)} {result.get('status')} H@1={m.get('hit_at_1')} attempts={result.get('attempt_count')} "
-                      f"${result.get('cost_usd') or 0:.4f} {result.get('failure_kind') or ''}", flush=True)
+                      f"{f.c.val.format_cost(result.get('cost_usd'))} {result.get('failure_kind') or ''}", flush=True)
                 streak = streak + 1 if shared_fault_suspect(result) else 0
                 if streak >= SHARED_FAULT_STREAK and not f.STOP.is_set():
                     state["stop_reason"] = (f"shared fault suspected: {streak} consecutive items failed at "
@@ -254,7 +255,7 @@ def main():
         report = smoke_report(smoke_jobs)
         f.save(f.HERE / "checks/smoke.json", report)
         print("smoke:", report["status"], f.HERE / "checks/smoke.json", flush=True)
-    print(f"finished: {state['status']}; terminal {state['terminal']}/{len(jobs)}; ${state['cost_usd']:.4f}", flush=True)
+    print(f"finished: {state['status']}; terminal {state['terminal']}/{len(jobs)}; {f.c.val.format_cost(state.get('cost_usd'))}", flush=True)
     return 3 if state.get("shared_fault") else 0
 
 

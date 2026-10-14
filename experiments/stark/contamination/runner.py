@@ -118,7 +118,8 @@ def finalize(result, directory):
                   total_wall_seconds=sum(r.get("wall_time_seconds", 0) for r in history),
                   total_input_tokens=sum(r.get("input_tokens") or 0 for r in history),
                   total_output_tokens=sum(r.get("output_tokens") or 0 for r in history),
-                  cost_usd=sum(r.get("attempt_cost_usd") or 0 for r in history),
+                  cost_usd=base.total_cost(history) if len(history) == len(list(directory.glob("attempt_*"))) else None,
+                  unknown_cost_attempts=sum(r.get("attempt_cost_usd") is None for r in history) + len(list(directory.glob("attempt_*"))) - len(history),
                   usage_incomplete=any(not r.get("usage_complete") for r in history))
     base.save(directory / "result.json", result)
     return result
@@ -217,7 +218,8 @@ def snapshot(state, results, active):
         group["completed"] += 1
         group["scored" if result["status"] == "scored" else "failed"] += 1
     state.update(updated_at=base.now(), heartbeat_at=base.now(), completed=len(results), running=len(active),
-                 groups=groups, known_cost_usd=sum(r.get("cost_usd", 0) for r in results.values()),
+                 groups=groups, known_cost_usd=sum(r["cost_usd"] for r in results.values() if r.get("cost_usd") is not None),
+                 unknown_cost_items=sum(r.get("cost_usd") is None for r in results.values()),
                  input_tokens=sum(r.get("total_input_tokens", 0) for r in results.values()),
                  output_tokens=sum(r.get("total_output_tokens", 0) for r in results.values()),
                  incomplete_usage_runs=sum(r.get("usage_incomplete", True) for r in results.values()),

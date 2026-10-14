@@ -90,3 +90,9 @@ def redact(text, env=None):
         if value and re.search(r"KEY|TOKEN|SECRET|PASSWORD", name, re.I):
             text = text.replace(value, "[redacted]")
     return re.sub(r"(?i)(bearer\s+)[^\s\"']+", r"\1[redacted]", text)
+
+
+def total_cost(rows, key="attempt_cost_usd"):
+    """A full total is unknown when any component has an unknown price."""
+    values = [row.get(key) for row in rows]
+    return None if any(value is None for value in values) else sum(values)

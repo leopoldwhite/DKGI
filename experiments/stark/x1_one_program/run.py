@@ -84,7 +84,7 @@ def persist_failure(job, error):
     x.save(path, {**previous, **job, "status": "failed", "terminal": True, "error_phase": "queue_boundary",
                   "error_type": type(error).__name__, "error": x.redact(repr(error)), "metrics": {},
                   "failure_kind": "queue_boundary_exception", "finished_at": x.now(),
-                  "cost_usd": previous.get("cost_usd", 0.0), "total_input_tokens": previous.get("total_input_tokens", 0),
+                  "cost_usd": previous.get("cost_usd"), "total_input_tokens": previous.get("total_input_tokens", 0),
                   "total_output_tokens": previous.get("total_output_tokens", 0), "tool_calls": previous.get("tool_calls", 0)})
 
 
@@ -192,7 +192,8 @@ def main():
                      hit_at_1=sum((r.get("metrics") or {}).get("hit_at_1") or 0 for r in scored) / len(scored) if scored else None,
                      python_started=sum(bool((r.get("python_gate") or {}).get("started")) for r in terminal),
                      python_refused_requests=sum((r.get("python_gate") or {}).get("refused") or 0 for r in terminal),
-                     cost_usd=sum(r.get("cost_usd") or 0 for r in terminal), heartbeat=x.now())
+                     cost_usd=x.base.total_cost(terminal, "cost_usd"),
+                     unknown_cost_items=sum(r.get("cost_usd") is None for r in terminal), heartbeat=x.now())
         x.save(state_path, state)
 
     streak, running, queue = 0, {}, list(pending)
@@ -227,7 +228,7 @@ def main():
                     continue
                 m, g = result.get("metrics") or {}, result.get("python_gate") or {}
                 print(f"{x.jobkey(job)} {result.get('status')} H@1={m.get('hit_at_1')} attempts={result.get('attempt_count')} "
-                      f"python started={g.get('started')} refused={g.get('refused')} ${result.get('cost_usd') or 0:.4f} "
+                      f"python started={g.get('started')} refused={g.get('refused')} {x.c.val.format_cost(result.get('cost_usd'))} "
                       f"{result.get('failure_kind') or ''}", flush=True)
                 streak = streak + 1 if shared_fault_suspect(result) else 0
                 if streak >= SHARED_FAULT_STREAK and not x.STOP.is_set():
@@ -245,7 +246,7 @@ def main():
         report = smoke_report(jobs)
         x.save(HERE / "checks/smoke.json", report)
         print("smoke:", report["status"], HERE / "checks/smoke.json", flush=True)
-    print(f"finished: {state['status']}; terminal {state['terminal']}/{len(jobs)}; ${state['cost_usd']:.4f}", flush=True)
+    print(f"finished: {state['status']}; terminal {state['terminal']}/{len(jobs)}; {x.c.val.format_cost(state.get('cost_usd'))}", flush=True)
     return 3 if state.get("shared_fault") else 0
 
 

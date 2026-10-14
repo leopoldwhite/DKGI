@@ -11,7 +11,7 @@
 <p><sup>1</sup>Texas A&amp;M University &nbsp; <sup>2</sup>University of Oregon</p>
 
 <p>
-  <a href="https://yuyangbai.com/dkgi/DKGI.pdf">Paper</a> &nbsp;·&nbsp;
+  <a href="https://arxiv.org/abs/2610.18616">Paper</a> &nbsp;·&nbsp;
   <a href="https://yuyangbai.com/dkgi/">Project</a> &nbsp;·&nbsp;
   <a href="https://github.com/leopoldwhite/DKGI">Code</a> &nbsp;·&nbsp;
   <a href="https://huggingface.co/collections/yuyangbai/dkgi">Data</a>
@@ -45,7 +45,7 @@ Hit@1 (%) on the three STaRK synthetic test sets, covering 7,108 queries:
 
 Training-free DKGI with GPT-6-Astra improves over GRASP by **8.2 / 9.0 / 6.7** Hit@1 points on Amazon / MAG / Prime.
 Baseline numbers are published results with different backbones, budgets and evaluation code. See the
-[paper](https://yuyangbai.com/dkgi/DKGI.pdf) for Recall@20, MRR and controlled ablations.
+[paper](https://arxiv.org/abs/2610.18616) for Recall@20, MRR and controlled ablations.
 
 ## Quickstart
 

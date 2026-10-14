@@ -11,13 +11,26 @@
 <p><sup>1</sup>Texas A&amp;M University &nbsp; <sup>2</sup>University of Oregon</p>
 
 <p>
+  <a href="https://arxiv.org/abs/2610.18616"><img src="https://img.shields.io/badge/arXiv-2610.18616-b31b1b.svg" alt="arXiv: 2610.18616"></a>
+</p>
+
+<p>
   <a href="https://arxiv.org/abs/2610.18616">Paper</a> &nbsp;·&nbsp;
   <a href="https://yuyangbai.com/dkgi/">Project</a> &nbsp;·&nbsp;
   <a href="https://github.com/leopoldwhite/DKGI">Code</a> &nbsp;·&nbsp;
   <a href="https://huggingface.co/collections/yuyangbai/dkgi">Data</a>
 </p>
 
+<p>
+  <a href="#overview">Overview</a> &nbsp;·&nbsp;
+  <a href="#quickstart">Quickstart</a> &nbsp;·&nbsp;
+  <a href="#reproduction">Reproduction</a> &nbsp;·&nbsp;
+  <a href="#citation">Citation</a>
+</p>
+
 </div>
+
+## Overview
 
 **Direct knowledge graph interaction (DKGI)** lets language model agents write and revise graph-access tools
 directly over complete node and edge files. The agent interleaves Python, shell search and file inspection:
@@ -67,6 +80,8 @@ python3 experiments/stark/use_downloaded_graphs.py
 python3 experiments/stark/dci_run/run.py pi_full_test --check --datasets prime
 ```
 
+## Reproduction
+
 The preflight checks prompts and execution isolation without a model call or API key. Live runs additionally
 require `MODEL_API_KEY`; [reproduction instructions](docs/reproduction.md) cover smoke checks, full runs and analysis.
 
@@ -84,10 +99,14 @@ require `MODEL_API_KEY`; [reproduction instructions](docs/reproduction.md) cover
 ## Citation
 
 ```bibtex
-@misc{bai2026dkgi,
-  title  = {Knowledge Graphs as Files: An Agent Harness Where Tool Creation and Tool Use Co-Evolve},
-  author = {Bai, Yuyang and Wang, Yu and Zhang, Yu},
-  year   = {2026}
+@misc{bai2026knowledgegraphsfilesagent,
+      title={Knowledge Graphs as Files: An Agent Harness Where Tool Creation and Tool Use Co-Evolve},
+      author={Yuyang Bai and Yu Wang and Yu Zhang},
+      year={2026},
+      eprint={2610.18616},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2610.18616},
 }
 ```
 

@@ -22,3 +22,8 @@ preferred-citation:
     - family-names: Zhang
       given-names: Yu
   year: 2026
+  url: "https://arxiv.org/abs/2610.18616"
+  identifiers:
+    - type: other
+      value: "arXiv:2610.18616"
+      description: "arXiv identifier"

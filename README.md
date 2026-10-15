@@ -8,7 +8,7 @@
   <a href="https://yuwang0103.github.io/">Yu Wang</a><sup>2</sup>,
   <a href="https://yuzhimanhua.github.io/">Yu Zhang</a><sup>1</sup>
 </p>
-<p><sup>1</sup>Texas A&amp;M University &nbsp; <sup>2</sup>University of Oregon</p>
+<p><sup>1</sup>Texas A&amp;M University &nbsp; <sup>2</sup>University of Georgia</p>
 
 <p>
   <a href="https://arxiv.org/abs/2610.18616"><img src="https://img.shields.io/badge/Paper-arXiv%3A2610.18616-b31b1b?style=flat-square" alt="Paper: arXiv 2610.18616"></a>
